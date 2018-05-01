@@ -216,9 +216,9 @@ def main():
             if v and k in scan_args.keys():
                 args[k] = v
         args = snake_dict_to_camel_dict(args, True)
+        helper = DynamoDbConditionsHelper(module)
         
         if module.params['filter_expression'] and type(module.params['filter_expression']) is list:
-            helper = DynamoDbConditionsHelper(module)
             expression = helper.build_filter_expression()
             args['FilterExpression'] = expression.condition_expression
             args['ExpressionAttributeNames'] = expression.attribute_name_placeholders
