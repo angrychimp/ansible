@@ -94,6 +94,15 @@ EXAMPLES = '''
   projection_expression: "PrivateIpAddress, SerialNumber"
   filter_expression:
     - Location: datacenter
+    
+# Same as above, but return "simplified" results
+# (DynamoDB attribute type is stripped; a simple dict is returned)
+- dynamodb_scan_table_facts:
+  table_name: Servers
+  simplify: True
+  projection_expression: "PrivateIpAddress, SerialNumber"
+  filter_expression:
+    - Location: datacenter
 
 # Mutually exclusive criteria
 # (20 < GradePercentage > 80)
@@ -179,6 +188,7 @@ def main():
         filter_expression=dict(type='list')
     )
     argument_spec.update(scan_args)
+    argument_spec.update(dict(simplify=dict(type='bool')))
 
     module = AnsibleAWSModule(argument_spec=argument_spec,
                            supports_check_mode=True)
@@ -217,14 +227,16 @@ def main():
         if args['ProjectionExpression'] and type(args['ProjectionExpression']) is list:
             args['ProjectionExpression'] = ", ".join(args['ProjectionExpression'])
         
-        result = connection.scan(**args)
+        result = connection.scan(**args)['Items']
+        if 'simplify' in module.params.keys() and module.params['simplify']:
+            result = helper.simplify(result)
     except ClientError as e:
         module.fail_json(msg=e.message, exception=traceback.format_exc())
     except ParamValidationError as e:
         msg = e.message + "\nexpression = " + str(expression)
         module.fail_json(msg=msg, exception=traceback.format_exc())
     
-    module.exit_json(Items=result['Items'])
+    module.exit_json(Items=result)
     
 if __name__ == '__main__':
     main()

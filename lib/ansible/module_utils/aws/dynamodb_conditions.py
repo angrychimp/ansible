@@ -97,3 +97,20 @@ class DynamoDbConditionsHelper(object):
             return builder.build_expression(filters)
         except botocore.exceptions.ClientError as e:
             self.module.fail_json_aws(e, msg="Error building condition expression")
+
+    def simplify(self, obj):
+        # Takes a obj data set in DynamoDB format and
+        # gets rid of the attribute type
+        # e.g. Attr: {"S":"value"} becomes just Attr: "value"
+        if type(obj) is list:
+            for idx in list(range(0, len(obj))):
+                if type(obj[idx]) in [dict, list]:
+                    obj[idx] = self.simplify(obj[idx])
+        elif type(obj) is dict:
+            keys = obj.keys()
+            if len(keys) == 1:
+                obj = self.simplify(obj[keys[0]])
+            else:
+                for idx in list(range(0, len(keys))):
+                    obj[keys[idx]] = self.simplify(obj[keys[idx]])
+        return obj
